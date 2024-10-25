@@ -5,7 +5,7 @@ Control your Bitburner instance through a REST API from your phone.
 ## Features
 - Remote command execution in Bitburner
 - Terminal-themed response
-- Basic commands: ps, ls, stats, hack
+- Basic commands: ps, ls, stats
 - Custom command support
 - Android control via [HTTP Shortcuts](https://github.com/Waboodoo/HTTP-Shortcuts)
 
@@ -39,7 +39,6 @@ The public API is available at `https://bitburner-remote-api.onrender.com`
 - `ps`: List running processes
 - `ls`: List files
 - `stats`: Show player stats
-- `hack`: Start hacking script
 
 ### Request Format
 ```json
@@ -56,7 +55,6 @@ The public API is available at `https://bitburner-remote-api.onrender.com`
 ```json
 {"command": "ls", "server_name": "home", "password": "your-password"}
 {"command": "stats", "password": "your-password"}
-{"command": "hack", "password": "your-password"}
 ```
 
 ## Adding Custom Commands
