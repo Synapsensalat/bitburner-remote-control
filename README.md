@@ -101,6 +101,6 @@ function executeMyCommand(ns, serverName) {
 
 ## Security Notes
 1. Passwords are sent as plain text - self-host if you need security
-2. Use unique password (it's just to identify users - **don't reuse**)
+2. Use a strong, unique password (it's just to identify users - **don't reuse**)
 3. Inactive users cleaned up after 1 hour
 4. Public API is on free tier - may have downtime
