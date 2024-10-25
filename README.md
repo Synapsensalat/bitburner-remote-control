@@ -1,16 +1,14 @@
 # Bitburner Remote Control
-
 Control your Bitburner instance through a REST API from your phone.
 
 ## Features
 - Remote command execution in Bitburner
 - Terminal-themed response
-- Basic commands: ps, ls, stats
+- Basic commands: ps, ls, stats, any .js script as command works as well
 - Custom command support
 - Android control via [HTTP Shortcuts](https://github.com/Waboodoo/HTTP-Shortcuts)
 
 ## Quick Start
-
 ### 1. In Bitburner
 Copy `remote-control.js` to your home server and run:
 ```bash
@@ -30,15 +28,18 @@ curl -X POST "https://bitburner-remote-api.onrender.com/run-command" \
            "password": "your-password"
          }'
 ```
-
 The public API is available at `https://bitburner-remote-api.onrender.com`
 
 ## Commands
-
 ### Built-in Commands
 - `ps`: List running processes
 - `ls`: List files
 - `stats`: Show player stats
+
+Any `.js` script can be executed by using its name as the command, returning success or failure:
+```json
+{"command": "basic-hack.js", "password": "your-password", "server_name": "home", "threads": 42, "args": ["n00dles"]}
+```
 
 ### Request Format
 ```json
@@ -58,13 +59,11 @@ The public API is available at `https://bitburner-remote-api.onrender.com`
 ```
 
 ## Adding Custom Commands
-
 ### In Bitburner
 ```javascript
 const commandHandlers = {
     'mycommand': executeMyCommand,
 };
-
 function executeMyCommand(ns, serverName) {
     return MatrixUI.wrap("Title", `<pre>output</pre>`);
 }
@@ -82,7 +81,6 @@ function executeMyCommand(ns, serverName) {
 ```
 
 ## Self-Hosting
-
 ### Requirements
 - Python 3.8+
 - FastAPI
