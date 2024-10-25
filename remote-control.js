@@ -26,7 +26,6 @@ export async function main(ns) {
         'ps': executePs,      // List running processes
         'ls': executeLs,      // List files
         'stats': executeStats, // Show player stats
-        'hack': executeHack   // Start hacking
     };
 
     // Main control loop
@@ -154,14 +153,6 @@ async function executeUnknownCommand(ns, command, serverName, threads = 1, args 
     } catch (error) {
         return MatrixUI.wrap(command, `<pre>Error executing command: ${error}</pre>`);
     }
-}
-
-/**
- * Start the hacking process
- */
-async function executeHack(ns) {
-    ns.exec('hack.js', 'home'); // Replace with your logic 
-    return MatrixUI.wrap("Hacking Status", `<pre>Started hacking script</pre>`);
 }
 
 /**
