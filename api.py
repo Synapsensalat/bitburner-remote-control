@@ -64,7 +64,7 @@ async def startup_event():
 
 @app.get("/")
 async def home():
-    return {"message": "Welcome to the Hybrid Bitburner FastAPI!"}
+    return {"message": "Welcome to the Bitburner Remote Control API!"}
 
 @app.post("/run-command")
 async def run_command(command: Command):
