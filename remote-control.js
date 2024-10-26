@@ -1,6 +1,7 @@
 /**
  * Remote Control Script for Bitburner
  * This script allows remote control of your Bitburner instance through a REST API.
+ * @param {NS} ns
  **/
 export async function main(ns) {
     if (!ns.args[0]) {
@@ -8,8 +9,10 @@ export async function main(ns) {
         return;
     }
 
+    killDuplicateScripts(ns);
+
     const userPassword = ns.args[0];
-    
+
     // API configuration - modify baseUrl if hosting the API elsewhere
     const API_CONFIG = {
         baseUrl: "https://bitburner-remote-api.onrender.com/",
@@ -23,9 +26,13 @@ export async function main(ns) {
 
     // Available command handlers
     const commandHandlers = {
-        'ps': executePs,      // List running processes
-        'ls': executeLs,      // List files
-        'stats': executeStats, // Show player stats
+        'ps': executePs,      // List running processes (isHtml defaults to true)
+        'ls': executeLs,      // List files (isHtml defaults to true)
+        'stats': executeStats, // Show player stats (isHtml defaults to true)
+        'ping': {            // Example of JSON output by setting isHtml to false
+            handler: executePing,
+            isHtml: false
+        }
     };
 
     // Main control loop
@@ -39,9 +46,24 @@ export async function main(ns) {
     }
 }
 
+/** @param {NS} ns */
+export function killDuplicateScripts(ns) {
+    const currentPID = ns.pid;
+    const currentScriptName = ns.getScriptName();
+    const runningScripts = ns.ps(ns.getHostname());
+
+    for (const script of runningScripts) {
+        if (script.filename === currentScriptName && script.pid !== currentPID) {
+            ns.tprint(`Killing duplicate ${currentScriptName} with PID: ${script.pid}`);
+            ns.kill(script.pid);
+        }
+    }
+}
+
 /**
  * Process incoming commands from the API
- */
+ * @param {NS} ns 
+**/
 async function processCommand(ns, config, handlers) {
     const commandUrl = config.baseUrl + config.endpoints.commands;
     const resultUrl = config.baseUrl + config.endpoints.results;
@@ -51,32 +73,42 @@ async function processCommand(ns, config, handlers) {
             'password': config.password
         }
     });
-    
+
     const commandData = await response.json();
     if (!commandData.command) return;
 
     try {
         let result;
-        if (handlers[commandData.command]) {
-            result = await handlers[commandData.command](ns, commandData);
+        const handler = handlers[commandData.command];
+
+        if (handler) {
+            // If handler is a function, use it directly, otherwise use the handler property
+            result = await (typeof handler === 'function' ? handler : handler.handler)(ns, commandData);
         } else {
             result = await executeUnknownCommand(ns, commandData);
         }
-        
+
         await fetch(resultUrl, {
             method: "POST",
-            headers: { 
+            headers: {
                 "Content-Type": "application/json",
-                "password": config.password 
+                "password": config.password
             },
-            body: JSON.stringify({ id: commandData.id, result, isHtml: true })
+            body: JSON.stringify({
+                id: commandData.id,
+                result,
+                isHtml: typeof handler === 'function' ? true : handler?.isHtml ?? true
+            })
         });
     } catch (error) {
         ns.print(`Error executing command ${commandData.command}: ${error}`);
     }
 }
 
-// Matrix-style UI configuration for command outputs
+/** 
+ * Matrix-style UI configuration for command outputs
+ * @param {NS} ns 
+*/
 const MatrixUI = {
     styles: {
         base: `
@@ -140,12 +172,13 @@ const MatrixUI = {
 
 /**
  * Execute a command that isn't handled by a specific handler
+ * @param {NS} ns 
  */
 async function executeUnknownCommand(ns, commandData) {
     const { command, server_name = 'home', threads = 1, args = [] } = commandData;
     try {
         const execPid = ns.exec(command, server_name, threads, ...args);
-        const resultMessage = execPid === 0 
+        const resultMessage = execPid === 0
             ? `Failed to execute command: ${command} on ${server_name}`
             : `Executed ${command} with PID ${execPid} on ${server_name}`;
 
@@ -156,7 +189,18 @@ async function executeUnknownCommand(ns, commandData) {
 }
 
 /**
+ * Example function that returns JSON
+ * @param {NS} ns 
+ */
+function executePing(ns, commandData) {
+    return {
+        message: "pong"
+    };
+}
+
+/**
  * Display player statistics
+ * @param {NS} ns 
  */
 function executeStats(ns, commandData) {
     const player = ns.getPlayer();
@@ -181,24 +225,26 @@ function executeStats(ns, commandData) {
 
 /**
  * List running processes on a server
+ * @param {NS} ns 
  */
 function executePs(ns, commandData) {
     const { server_name = 'home' } = commandData;
     const processes = ns.ps(server_name);
-    const content = `<ul>${processes.map(process => 
+    const content = `<ul>${processes.map(process =>
         `<li>${process.filename} (PID: ${process.pid}, Threads: ${process.threads})</li>`
     ).join('')}</ul>`;
-    
+
     return MatrixUI.wrap("Process List", content);
 }
 
 /**
  * List files on a server
+ * @param {NS} ns 
  */
 function executeLs(ns, commandData) {
     const { server_name = 'home' } = commandData;
     const files = ns.ls(server_name);
-    const content = `<ul>${files.map(file => 
+    const content = `<ul>${files.map(file =>
         `<li class="${MatrixUI.getFileClass(file)}">${file}</li>`
     ).join('')}</ul>`;
 
