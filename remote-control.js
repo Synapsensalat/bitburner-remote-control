@@ -52,16 +52,15 @@ async function processCommand(ns, config, handlers) {
         }
     });
     
-    const { command, id: commandId, server_name = 'home', threads = 1, args = [] } = await response.json();
-
-    if (!command) return;
+    const commandData = await response.json();
+    if (!commandData.command) return;
 
     try {
         let result;
-        if (handlers[command]) {
-            result = await handlers[command](ns, server_name);
+        if (handlers[commandData.command]) {
+            result = await handlers[commandData.command](ns, commandData);
         } else {
-            result = await executeUnknownCommand(ns, command, server_name, threads, args);
+            result = await executeUnknownCommand(ns, commandData);
         }
         
         await fetch(resultUrl, {
@@ -70,10 +69,10 @@ async function processCommand(ns, config, handlers) {
                 "Content-Type": "application/json",
                 "password": config.password 
             },
-            body: JSON.stringify({ id: commandId, result, isHtml: true })
+            body: JSON.stringify({ id: commandData.id, result, isHtml: true })
         });
     } catch (error) {
-        ns.print(`Error executing command ${command}: ${error}`);
+        ns.print(`Error executing command ${commandData.command}: ${error}`);
     }
 }
 
@@ -142,12 +141,13 @@ const MatrixUI = {
 /**
  * Execute a command that isn't handled by a specific handler
  */
-async function executeUnknownCommand(ns, command, serverName, threads = 1, args = []) {
+async function executeUnknownCommand(ns, commandData) {
+    const { command, server_name = 'home', threads = 1, args = [] } = commandData;
     try {
-        const execPid = ns.exec(command, serverName, threads, ...args);
+        const execPid = ns.exec(command, server_name, threads, ...args);
         const resultMessage = execPid === 0 
-            ? `Failed to execute command: ${command} on ${serverName}`
-            : `Executed ${command} with PID ${execPid} on ${serverName}`;
+            ? `Failed to execute command: ${command} on ${server_name}`
+            : `Executed ${command} with PID ${execPid} on ${server_name}`;
 
         return MatrixUI.wrap(command, `<pre>${resultMessage}</pre>`);
     } catch (error) {
@@ -158,7 +158,7 @@ async function executeUnknownCommand(ns, command, serverName, threads = 1, args 
 /**
  * Display player statistics
  */
-function executeStats(ns) {
+function executeStats(ns, commandData) {
     const player = ns.getPlayer();
     const stats = [
         ['Money', `$${ns.formatNumber(ns.getServerMoneyAvailable("home"))}`],
@@ -182,8 +182,9 @@ function executeStats(ns) {
 /**
  * List running processes on a server
  */
-function executePs(ns, serverName) {
-    const processes = ns.ps(serverName);
+function executePs(ns, commandData) {
+    const { server_name = 'home' } = commandData;
+    const processes = ns.ps(server_name);
     const content = `<ul>${processes.map(process => 
         `<li>${process.filename} (PID: ${process.pid}, Threads: ${process.threads})</li>`
     ).join('')}</ul>`;
@@ -194,11 +195,12 @@ function executePs(ns, serverName) {
 /**
  * List files on a server
  */
-function executeLs(ns, serverName) {
-    const files = ns.ls(serverName);
+function executeLs(ns, commandData) {
+    const { server_name = 'home' } = commandData;
+    const files = ns.ls(server_name);
     const content = `<ul>${files.map(file => 
         `<li class="${MatrixUI.getFileClass(file)}">${file}</li>`
     ).join('')}</ul>`;
 
-    return MatrixUI.wrap(`Files on ${serverName}`, content);
+    return MatrixUI.wrap(`Files on ${server_name}`, content);
 }
